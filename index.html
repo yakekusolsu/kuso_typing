@@ -44,14 +44,12 @@
             position: absolute;
             inset: 0;
             z-index: 0;
-            /* 背景全体はクリックをスルーさせる */
             pointer-events: none;
         }
         .video-bg-layer iframe {
             width: 100%;
             height: 100%;
             border: none;
-            /* iframe（真ん中）だけはクリックできるようにする */
             pointer-events: auto;
         }
 
@@ -92,6 +90,12 @@
             box-shadow: 0 4px 0 #330000; 
             color: #ff0000;
             animation: pulse-red 1s infinite alternate;
+        }
+
+        /* 時間選択ボタン（共通スタイル） */
+        .time-btn {
+            @apply bg-white text-orange-600 border-2 border-orange-500 py-3 rounded-lg font-black hover:bg-orange-50 transition-colors shadow-md;
+            font-family: 'Noto Sans JP', sans-serif;
         }
 
         @keyframes pulse-red {
@@ -217,12 +221,11 @@
                     <!-- 背景動画レイヤー -->
                     <div id="video-bg" class="video-bg-layer"></div>
                     
-                    <div id="lane" class="w-full h-full relative overflow-hidden z-10 pointer-events-none">
-                        <!-- レーン自体もクリックをスルーさせるが、動的な寿司要素はpointer-events-autoで個別制御されるべきところを、今回は背景優先のためスルー設定 -->
-                    </div>
+                    <div id="lane" class="w-full h-full relative overflow-hidden z-10 pointer-events-none"></div>
                     <div id="comment-layer" class="comment-layer"></div>
                     
                     <div id="overlay" class="absolute inset-0 z-[100] flex items-center justify-center bg-black/80">
+                        <!-- メニュー画面 -->
                         <div id="menu-screen" class="text-center text-white px-8">
                             <div class="mb-6">
                                 <h2 class="text-5xl font-black text-yellow-500 italic drop-shadow-lg tracking-tighter" style="font-family: 'Noto Sans JP';">KUSO TYPING</h2>
@@ -230,13 +233,29 @@
                             </div>
                             
                             <div class="grid grid-cols-2 gap-3 w-[440px] mx-auto">
-                                <button onclick="startGame('baboo')" class="sushida-btn btn-baboo col-span-2 py-2">幼児退行モード</button>
-                                <button onclick="startGame('easy')" class="sushida-btn btn-easy py-2">簡単</button>
-                                <button onclick="startGame('normal')" class="sushida-btn btn-normal py-2">普通</button>
-                                <button onclick="startGame('hard')" class="sushida-btn btn-hard py-2">難しい</button>
-                                <button onclick="startGame('insane')" class="sushida-btn btn-insane py-2">激ムズ</button>
-                                <button onclick="startGame('jibanyan')" class="sushida-btn btn-jibanyan col-span-2 py-2 text-sm">尻からジバニャン出てくるくらい絶頂激ムズ</button>
-                                <button onclick="startGame('impossible')" class="sushida-btn btn-impossible col-span-2 py-2">IMPOSSIBLE</button>
+                                <button onclick="selectDifficulty('baboo')" class="sushida-btn btn-baboo col-span-2 py-2">幼児退行モード</button>
+                                <button onclick="selectDifficulty('easy')" class="sushida-btn btn-easy py-2">簡単</button>
+                                <button onclick="selectDifficulty('normal')" class="sushida-btn btn-normal py-2">普通</button>
+                                <button onclick="selectDifficulty('hard')" class="sushida-btn btn-hard py-2">難しい</button>
+                                <button onclick="selectDifficulty('insane')" class="sushida-btn btn-insane py-2">激ムズ</button>
+                                <button onclick="selectDifficulty('jibanyan')" class="sushida-btn btn-jibanyan col-span-2 py-2 text-sm">尻からジバニャン出てくるくらい絶頂激ムズ</button>
+                                <button onclick="selectDifficulty('impossible')" class="sushida-btn btn-impossible col-span-2 py-2">IMPOSSIBLE</button>
+                            </div>
+                        </div>
+
+                        <!-- 時間選択画面 -->
+                        <div id="time-selection" class="text-center hidden text-white px-8">
+                            <div class="mb-8">
+                                <h2 id="selected-diff-label" class="text-3xl font-black text-white mb-2" style="font-family: 'Noto Sans JP';">難易度：普通</h2>
+                                <p class="text-yellow-400 font-bold">コース（制限時間）を選んでください</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 w-[400px] mx-auto">
+                                <button onclick="startGame(30)" class="time-btn">30秒コース</button>
+                                <button onclick="startGame(60)" class="time-btn">1分コース</button>
+                                <button onclick="startGame(120)" class="time-btn">2分コース</button>
+                                <button onclick="startGame(180)" class="time-btn">3分コース</button>
+                                <button onclick="startGame(300)" class="time-btn col-span-2">5分コース（耐久）</button>
+                                <button onclick="backToMenu()" class="col-span-2 mt-4 text-gray-400 hover:text-white underline text-sm">難易度選択に戻る</button>
                             </div>
                         </div>
 
@@ -426,7 +445,7 @@
         };
 
         let currentDiff = CONFIG.normal;
-        let score = 0, combo = 0, maxCombo = 0, timeLeft = 60, isPlaying = false;
+        let score = 0, combo = 0, maxCombo = 0, timeLeft = 60, isPlaying = false, totalTime = 60;
         let sushis = [], lockedKeys = new Set(), keyMap = {}; 
         let currentVideoId = "";
 
@@ -491,12 +510,28 @@
             }
         }
 
-        function startGame(diffKey) {
+        // 難易度を選択し、時間選択画面を表示
+        function selectDifficulty(diffKey) {
             currentDiff = CONFIG[diffKey];
-            score = 0; combo = 0; maxCombo = 0; timeLeft = 60; sushis = [];
+            document.getElementById('selected-diff-label').textContent = `難易度：${currentDiff.label}`;
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('time-selection').classList.remove('hidden');
+        }
+
+        // タイトル画面に戻る
+        function backToMenu() {
+            document.getElementById('time-selection').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+        }
+
+        function startGame(seconds) {
+            timeLeft = seconds;
+            totalTime = seconds;
+            score = 0; combo = 0; maxCombo = 0; sushis = [];
             lockedKeys.clear(); keyMap = {};
             
             document.getElementById('overlay').classList.add('hidden');
+            document.getElementById('time-selection').classList.add('hidden'); // 時間選択も隠す
             document.getElementById('stat-views').textContent = "0";
             exitBtn.classList.remove('hidden');
             isPlaying = true;
@@ -510,7 +545,7 @@
                 if(!isPlaying) return clearInterval(gameTick);
                 timeLeft--;
                 timerEl.textContent = timeLeft;
-                document.getElementById('time-progress').style.width = (Math.max(0, timeLeft)/60*100) + "%";
+                document.getElementById('time-progress').style.width = (Math.max(0, timeLeft)/totalTime*100) + "%";
                 if(timeLeft <= 0) endGame();
             }, 1000);
 
@@ -754,6 +789,7 @@
             exitBtn.classList.add('hidden');
             document.getElementById('overlay').classList.remove('hidden');
             document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('time-selection').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
             
             document.getElementById('final-stats').innerHTML = `
