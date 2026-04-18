@@ -210,6 +210,7 @@
             <div class="flex gap-4 text-[10px] text-gray-500">
                 <span>再生: <strong id="stat-views" class="text-black">0</strong></span>
                 <span>コメント: <strong id="stat-comments" class="text-black">0</strong></span>
+                <span>訪問者: <strong id="stat-visitors" class="text-black">0</strong></span>
                 <span class="text-blue-600 underline">#タイピング</span>
                 <span class="text-blue-600 underline">#シコシコ技術部</span>
             </div>
@@ -464,10 +465,17 @@
         // 音響設定
         const keyAudio = new Audio('key.mp3');
         function playKeySound() {
-            // クローンを作成して再生することで、連打に対応
             const sound = keyAudio.cloneNode();
-            sound.play().catch(e => { /* ブラウザの制限などで再生できなかった場合は無視 */ });
+            sound.play().catch(e => {});
         }
+
+        // 訪問者数カウント処理
+        window.addEventListener('load', () => {
+            let visitors = parseInt(localStorage.getItem('kuso_typing_visitors')) || 0;
+            visitors++;
+            localStorage.setItem('kuso_typing_visitors', visitors);
+            document.getElementById('stat-visitors').textContent = visitors.toLocaleString();
+        });
 
         // 背景動画設定
         bgUrlInput.addEventListener('keydown', (e) => {
@@ -502,11 +510,11 @@
             
             if (action === 'pause') {
                 if (iframe) {
-                    iframe.src = "about:blank"; // 完全停止
+                    iframe.src = "about:blank"; 
                 }
             } else if (action === 'play') {
                 if (currentVideoId) {
-                    loadVideo(currentVideoId); // 再読込して再生
+                    loadVideo(currentVideoId); 
                 } else {
                     const url = bgUrlInput.value.trim();
                     const match = url.match(/(sm|nm|so)?\d+/);
@@ -518,7 +526,6 @@
             }
         }
 
-        // 難易度を選択し、時間選択画面を表示
         function selectDifficulty(diffKey) {
             currentDiff = CONFIG[diffKey];
             document.getElementById('selected-diff-label').textContent = `難易度：${currentDiff.label}`;
@@ -526,7 +533,6 @@
             document.getElementById('time-selection').classList.remove('hidden');
         }
 
-        // タイトル画面に戻る
         function backToMenu() {
             document.getElementById('time-selection').classList.add('hidden');
             document.getElementById('menu-screen').classList.remove('hidden');
@@ -539,7 +545,7 @@
             lockedKeys.clear(); keyMap = {};
             
             document.getElementById('overlay').classList.add('hidden');
-            document.getElementById('time-selection').classList.add('hidden'); // 時間選択も隠す
+            document.getElementById('time-selection').classList.add('hidden'); 
             document.getElementById('stat-views').textContent = "0";
             exitBtn.classList.remove('hidden');
             isPlaying = true;
@@ -722,7 +728,6 @@
             const key = e.key.toLowerCase();
             if(!/^[a-z]$/.test(key)) return;
             
-            // 入力があったら必ず音を鳴らす
             playKeySound();
 
             if(lockedKeys.has(key)) return;
