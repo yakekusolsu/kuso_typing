@@ -208,9 +208,9 @@
         <header class="bg-gray-100 p-3 border-b border-gray-300">
             <h1 class="text-lg font-bold truncate">寿司打をシコシコ動画風にしてみた【KUSO TYPING】</h1>
             <div class="flex gap-4 text-[10px] text-gray-500">
+                <span>訪問数: <strong id="stat-visits" class="text-black">...</strong></span>
                 <span>再生: <strong id="stat-views" class="text-black">0</strong></span>
                 <span>コメント: <strong id="stat-comments" class="text-black">0</strong></span>
-                <span>訪問者: <strong id="stat-visitors" class="text-black">0</strong></span>
                 <span class="text-blue-600 underline">#タイピング</span>
                 <span class="text-blue-600 underline">#シコシコ技術部</span>
             </div>
@@ -327,6 +327,55 @@
             </div>
         </main>
     </div>
+
+    <script type="module">
+        // Firebase modules import
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Global state for visits
+        async function handleVisits() {
+            // Auth first (RULE 3)
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, async (user) => {
+                if (!user) return;
+
+                // Path following RULE 1
+                const visitDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'stats', 'visits');
+
+                try {
+                    const snap = await getDoc(visitDocRef);
+                    if (!snap.exists()) {
+                        await setDoc(visitDocRef, { count: 1 });
+                        document.getElementById('stat-visits').textContent = "1";
+                    } else {
+                        await updateDoc(visitDocRef, { count: increment(1) });
+                        const updatedSnap = await getDoc(visitDocRef);
+                        document.getElementById('stat-visits').textContent = updatedSnap.data().count.toLocaleString();
+                    }
+                } catch (e) {
+                    console.error("Visit tracker error", e);
+                    document.getElementById('stat-visits').textContent = "---";
+                }
+            });
+        }
+
+        // Initialize visit counter
+        handleVisits();
+    </script>
 
     <script>
         const WORDS = [
@@ -466,16 +515,8 @@
         const keyAudio = new Audio('key.mp3');
         function playKeySound() {
             const sound = keyAudio.cloneNode();
-            sound.play().catch(e => {});
+            sound.play().catch(e => { });
         }
-
-        // 訪問者数カウント処理
-        window.addEventListener('load', () => {
-            let visitors = parseInt(localStorage.getItem('kuso_typing_visitors')) || 0;
-            visitors++;
-            localStorage.setItem('kuso_typing_visitors', visitors);
-            document.getElementById('stat-visitors').textContent = visitors.toLocaleString();
-        });
 
         // 背景動画設定
         bgUrlInput.addEventListener('keydown', (e) => {
@@ -514,7 +555,7 @@
                 }
             } else if (action === 'play') {
                 if (currentVideoId) {
-                    loadVideo(currentVideoId); 
+                    loadVideo(currentVideoId);
                 } else {
                     const url = bgUrlInput.value.trim();
                     const match = url.match(/(sm|nm|so)?\d+/);
@@ -545,7 +586,7 @@
             lockedKeys.clear(); keyMap = {};
             
             document.getElementById('overlay').classList.add('hidden');
-            document.getElementById('time-selection').classList.add('hidden'); 
+            document.getElementById('time-selection').classList.add('hidden');
             document.getElementById('stat-views').textContent = "0";
             exitBtn.classList.remove('hidden');
             isPlaying = true;
