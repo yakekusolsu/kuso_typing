@@ -461,6 +461,14 @@
 
         let gameTick, spawnTick, chaosTick, spamTick;
 
+        // 音響設定
+        const keyAudio = new Audio('key.mp3');
+        function playKeySound() {
+            // クローンを作成して再生することで、連打に対応
+            const sound = keyAudio.cloneNode();
+            sound.play().catch(e => { /* ブラウザの制限などで再生できなかった場合は無視 */ });
+        }
+
         // 背景動画設定
         bgUrlInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -713,6 +721,10 @@
 
             const key = e.key.toLowerCase();
             if(!/^[a-z]$/.test(key)) return;
+            
+            // 入力があったら必ず音を鳴らす
+            playKeySound();
+
             if(lockedKeys.has(key)) return;
             const actualChar = keyMap[key] || key;
             checkHit(actualChar);
